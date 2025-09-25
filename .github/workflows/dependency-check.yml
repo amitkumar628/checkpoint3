@@ -2,7 +2,7 @@ name: Dependency Audit
 
 on:
   schedule:
-    - cron: "0 0 * * *" # runs every night at 00:00 UTC
+    - cron: "0 0 * * *"  # runs every night at 00:00 UTC
   push:
     branches: [main]
 
@@ -32,8 +32,17 @@ jobs:
           path: audit.json
           retention-days: 7
 
+      - name: Check if vulnerabilities exist
+        id: check_vulns
+        run: |
+          if grep -q '"severity": "high"' audit.json; then
+            echo "vulnerabilities=true" >> $GITHUB_OUTPUT
+          else
+            echo "vulnerabilities=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Create GitHub Issue if vulnerabilities found
-        if: contains(fromJson(file('audit.json')).metadata.vulnerabilities, 'high')
+        if: steps.check_vulns.outputs.vulnerabilities == 'true'
         uses: peter-evans/create-issue-from-file@v4
         with:
           title: "⚠️ Security Vulnerabilities Detected"
